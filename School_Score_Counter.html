@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学分规划器</title>
+    <style>
+        /* 默认日间模式 (Light Mode) 变量 */
+        :root {
+            --primary: #2b6cb0;
+            --success: #38a169;
+            --danger: #e53e3e;
+            --warning: #d69e2e;
+            --bg-color: #f7fafc;
+            --card-bg: #ffffff;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --border-color: #e2e8f0;
+            --track-bg: #edf2f7;
+            --segment-border: rgba(0, 0, 0, 0.15); /* 进度条色块描边 */
+            --table-head-bg: #edf2f7;
+            --modal-overlay: rgba(0, 0, 0, 0.5);
+        }
+
+        /* 夜间模式 (Dark Mode) 变量 */
+        [data-theme="dark"] {
+            --primary: #63b3ed;      
+            --success: #68d391;      
+            --danger: #fc8181;       
+            --warning: #fbd38d;      
+            --bg-color: #1a202c;     
+            --card-bg: #2d3748;      
+            --text-main: #f7fafc;    
+            --text-muted: #a0aec0;   
+            --border-color: #4a5568; 
+            --track-bg: #171923;     
+            --segment-border: rgba(255, 255, 255, 0.15); /* 暗黑模式下的色块描边 */
+            --table-head-bg: rgba(0, 0, 0, 0.2);
+            --modal-overlay: rgba(0, 0, 0, 0.7);
+        }
+        
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.6; transition: background-color 0.3s, color 0.3s; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        /* 顶栏布局 */
+        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .header-left { display: flex; flex-direction: column; gap: 5px; }
+        .header-right { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+        /* 主题切换开关 (胶囊风格) */
+        .theme-switch-wrapper { display: flex; align-items: center; margin-right: 10px; }
+        .theme-switch { display: inline-block; height: 30px; position: relative; width: 60px; }
+        .theme-switch input { display: none; }
+        .slider { background-color: #cbd5e0; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 5px; }
+        .slider:before { background-color: #fff; bottom: 3px; content: ""; height: 24px; left: 3px; position: absolute; transition: .4s; width: 24px; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 2; }
+        input:checked + .slider { background-color: #4a5568; }
+        input:checked + .slider:before { transform: translateX(30px); }
+        .slider .icon { font-size: 14px; z-index: 1; user-select: none; }
+        
+        /* 线框发光按钮设计 */
+        .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-weight: bold; transition: all 0.2s; font-size: 0.9em; background: transparent; }
+        .btn-outline { border-color: var(--text-muted); color: var(--text-main); }
+        .btn-outline:hover { background-color: rgba(160, 174, 192, 0.15); }
+        .btn-primary { border-color: var(--primary); color: var(--primary); }
+        .btn-primary:hover { background-color: rgba(99, 179, 237, 0.15); box-shadow: 0 0 8px rgba(99, 179, 237, 0.3); }
+        .btn-success { border-color: var(--success); color: var(--success); }
+        .btn-success:hover { background-color: rgba(104, 211, 145, 0.15); box-shadow: 0 0 8px rgba(104, 211, 145, 0.3); }
+        .btn-danger { border-color: var(--danger); color: var(--danger); }
+        .btn-danger:hover { background-color: rgba(252, 129, 129, 0.15); box-shadow: 0 0 8px rgba(252, 129, 129, 0.3); }
+        .btn-warning { border-color: var(--warning); color: var(--warning); }
+        .btn-warning:hover { background-color: rgba(251, 211, 141, 0.15); box-shadow: 0 0 8px rgba(251, 211, 141, 0.3); }
+        
+        .card { background: var(--card-bg); border-radius: 8px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border-color); transition: background-color 0.3s; }
+        [data-theme="dark"] .card { box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        .progress-group { margin-bottom: 15px; }
+        .progress-header { display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
+        
+        /* 进度条轨道样式 */
+        .progress-bar { width: 100%; height: 12px; background-color: var(--track-bg); border-radius: 6px; overflow: hidden; display: flex; border: 1px solid var(--border-color); box-sizing: border-box; }
+        .progress-fill { height: 100%; background-color: var(--primary); transition: width 0.3s ease; box-sizing: border-box; }
+        .progress-fill.complete { background-color: var(--success); }
+        .progress-fill.failed-mandatory { background-color: #c53030; } 
+        
+        .total-separator { border: 0; height: 1px; background: var(--border-color); margin: 20px 0 15px 0; }
+
+        .ticket-counter { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 10px; background: rgba(0,0,0,0.02); }
+        [data-theme="dark"] .ticket-counter { background: rgba(0,0,0,0.1); }
+        .counter-controls { display: flex; align-items: center; gap: 10px; }
+        .btn-icon { width: 28px; height: 28px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main); cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn-icon:hover { background: var(--track-bg); }
+
+        .semester-block { margin-bottom: 40px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        th { background-color: var(--table-head-bg); color: var(--text-muted); font-size: 0.85em; text-transform: uppercase; border-bottom: 2px solid var(--border-color); }
+        
+        .status-planned { color: var(--text-muted); }
+        .status-progress { color: var(--primary); font-weight: bold; }
+        .status-passed, .status-retaken { color: var(--success); font-weight: bold; }
+        .status-failed { color: var(--danger); font-weight: bold; }
+
+        /* 弹窗与表单样式 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-overlay); justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
+        .modal { background: var(--card-bg); padding: 25px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); border: 1px solid var(--border-color); max-height: 90vh; overflow-y: auto; color: var(--text-main); }
+        .modal.modal-large { max-width: 650px; }
+        .modal h3 { margin-top: 0; margin-bottom: 20px; color: var(--primary); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9em; font-weight: bold; color: var(--text-muted); }
+        .form-group input, .form-group select { width: 100%; padding: 8px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; color: var(--text-main); outline: none; transition: border-color 0.2s; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        
+        select { background-color: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; }
+        
+        .help-content h4 { color: var(--primary); margin-bottom: 10px; margin-top: 20px; }
+        .help-content p, .help-content li { font-size: 0.9em; color: var(--text-main); margin-bottom: 5px; }
+        .help-content pre { background: var(--bg-color); color: var(--text-muted); padding: 10px; border-radius: 6px; font-size: 0.85em; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid var(--border-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="header-left">
+            <h1 style="margin: 0; color: var(--primary);">学分规划器</h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-weight: bold;" id="major-info">未设置专业</p>
+        </div>
+        <div class="header-right">
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-checkbox">
+                    <input type="checkbox" id="theme-checkbox" onchange="switchTheme(this.checked)" />
+                    <div class="slider">
+                        <span class="icon moon" style="padding-left:4px;">🌙</span>
+                        <span class="icon sun" style="padding-right:4px;">☀️</span>
+                    </div>
+                </label>
+            </div>
+            
+            <button class="btn btn-outline" onclick="openHelpModal()">📖 使用说明</button>
+            <button class="btn btn-outline" onclick="openSettingsModal()">⚙️ 设置</button>
+            <button class="btn btn-primary" onclick="openModal()">+ 添加课程</button>
+            <input type="file" id="jsonInput" accept=".json" style="display: none;" onchange="importData(event)">
+            <button class="btn btn-success" onclick="document.getElementById('jsonInput').click()">导入 JSON</button>
+            <button class="btn btn-warning" onclick="exportData()">导出进度</button>
+            <button class="btn btn-danger" onclick="clearCache()">清除缓存</button>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card" id="dashboard">
+            <h3>学分进度看板</h3>
+            <div id="progress-container">
+                <p style="color: var(--text-muted); font-size: 0.9em;">进度数据待初始化。请导入 JSON，或点击“设置”手动配置。</p>
+            </div>
+        </div>
+
+        <div class="card" id="second-classroom">
+            <h3>第二课堂要求</h3>
+            <div id="tickets-container">
+                <p style="color: var(--text-muted); font-size: 0.9em;">进度数据待初始化。请导入 JSON，或点击“设置”手动配置。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>各学期课程状态</h3>
+        <div id="course-list">
+            <p style="color: var(--text-muted); text-align: center; padding: 20px;">数据导入或添加课程后，将按学期展示课程表。</p>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="helpModal">
+    <div class="modal modal-large">
+        <h3 id="helpModalTitle">📖 使用说明</h3>
+        <div class="help-content">
+            <p>欢迎使用学分规划器！这是一款纯本地化的进度追踪工具。</p>
+            
+            <h4>✨ 核心功能</h4>
+            <ul>
+                <li><strong>完全本地化</strong>：数据保存在浏览器中，刷新不丢失，保护隐私。</li>
+                <li><strong>状态计算去重</strong>：如果标记了“挂科”，学分不会被重复计算；“重修通过”后才会正常计入。</li>
+                <li><strong>债务高亮提醒</strong>：在总进度条上，挂科的必修科目会以暗红色色块单独标示，时刻提醒重修任务。</li>
+                <li><strong>多彩学分概览</strong>：直观的按学期甘特图，支持日夜双模式，色彩描边分离，随时掌握学期课业压力和学分结构。</li>
+                <li><strong>手动与 AI 结合</strong>：支持通过“设置”手动录入全部要求，也支持通过 AI 生成 JSON 文件一键初始化。</li>
+            </ul>
+
+            <h4>🤖 AI 识别提示词及导入格式</h4>
+            <p>你可以复制下方提示词，带上课表/培养方案截图发给 AI (如 ChatGPT/Gemini) 生成初始化数据：</p>
+            <pre>你是一个教务数据提取助手。请阅读我的课表图片，严格按以下 JSON 格式输出，不要输出多余解释文字。
+
+提取规则：
+1. student_profile: major 填图片上的专业名称。
+2. credit_requirements: 提取培养方案中毕业要求所需的各分类总学分。
+3. second_classroom: 提取第二课堂的讲座票和活动票要求数量（如无要求可填 0）。
+4. courses: 提取所有课程。字段：course_name(名称), credits(学分，浮点数), category(从 public_mandatory, public_general, major_mandatory, major_elective, practical_teaching 选一), suggested_semester(建议开课学期，数字1-8，不确定填0)。
+
+输出格式模板：
+{
+  "student_profile": { "major": "软件工程" },
+  "credit_requirements": { "public_mandatory": 36.0, "public_general": 39.0, "major_mandatory": 44.0, "major_elective": 15.0, "practical_teaching": 36.0 },
+  "second_classroom": { "lecture_tickets_required": 8, "activity_tickets_required": 6 },
+  "courses": [ { "course_name": "高等数学", "credits": 4.0, "category": "public_mandatory", "suggested_semester": 1 } ]
+}</pre>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" style="border: 1px solid var(--primary);" onclick="closeHelpModal()">我知道了</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="courseModal">
+    <div class="modal">
+        <h3 id="modalTitle">添加课程</h3>
+        <input type="hidden" id="form_id">
+        <div class="form-group">
+            <label>课程名称</label>
+            <input type="text" id="form_name" placeholder="例如：高级系统架构">
+        </div>
+        <div class="form-group">
+            <label>学分</label>
+            <input type="number" id="form_credits" step="0.5" min="0" placeholder="例如：2.0">
+        </div>
+        <div class="form-group">
+            <label>课程分类</label>
+            <select id="form_category">
+                <option value="public_mandatory">公共基础课（必修）</option>
+                <option value="public_general">公共基础课（通识）</option>
+                <option value="major_mandatory">专业基础课（必修）</option>
+                <option value="major_elective">专业基础课（选修）</option>
+                <option value="practical_teaching">集中实践教学</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>建议开课学期 (1-8，0为不指定)</label>
+            <input type="number" id="form_semester" min="0" max="8" value="1">
+        </div>
+        <div class="form-group">
+            <label>当前状态</label>
+            <select id="form_status">
+                <option value="planned">未修 (Planned)</option>
+                <option value="progress">修读中 (In Progress)</option>
+                <option value="passed">已通过 (Passed)</option>
+                <option value="failed">挂科 (Failed)</option>
+                <option value="retaken">重修通过 (Retaken)</option>
+            </select>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px;">
+            <button class="btn btn-danger" id="btn_delete" onclick="deleteCourse()" style="display: none; padding: 0;">删除</button>
+            <div class="modal-actions" style="margin-top: 0; width: 100%;">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveCourse()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <h3 id="settingsModalTitle">⚙️ 设置</h3>
+        
+        <h4 style="margin-bottom: 10px; color: var(--primary);">基本信息</h4>
+        <div class="form-group">
+            <label>专业名称 (Major)</label>
+            <input type="text" id="set_major" placeholder="例如：软件工程">
+        </div>
+        
+        <h4 style="margin-bottom: 10px; color: var(--primary);">学分要求目标</h4>
+        <div class="form-group">
+            <label>公共基础课（必修）</label>
+            <input type="number" id="set_pub_man" step="0.5" min="0" value="0">
+        </div>
+        <div class="form-group">
+            <label>公共基础课（通识）</label>
+            <input type="number" id="set_pub_gen" step="0.5" min="0" value="0">
+        </div>
+        <div class="form-group">
+            <label>专业基础课（必修）</label>
+            <input type="number" id="set_maj_man" step="0.5" min="0" value="0">
+        </div>
+        <div class="form-group">
+            <label>专业基础课（选修）</label>
+            <input type="number" id="set_maj_ele" step="0.5" min="0" value="0">
+        </div>
+        <div class="form-group">
+            <label>集中实践教学</label>
+            <input type="number" id="set_prac" step="0.5" min="0" value="0">
+        </div>
+        
+        <h4 style="margin-bottom: 10px; color: var(--primary);">第二课堂目标</h4>
+        <div class="form-group">
+            <label>讲座票要求数量</label>
+            <input type="number" id="set_lec_req" step="1" min="0" value="8">
+        </div>
+        <div class="form-group">
+            <label>活动票要求数量</label>
+            <input type="number" id="set_act_req" step="1" min="0" value="6">
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeSettingsModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveSettings()">保存配置</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let appData = {
+        student_profile: { major: "未设置专业" },
+        credit_requirements: {},
+        second_classroom: {},
+        courses: []
+    };
+
+    const categoryNames = {
+        public_mandatory: "公共基础课（必修）",
+        public_general: "公共基础课（通识）",
+        major_mandatory: "专业基础课（必修）",
+        major_elective: "专业基础课（选修）",
+        practical_teaching: "集中实践教学"
+    };
+
+    const mandatoryCategories = ['public_mandatory', 'major_mandatory', 'practical_teaching'];
+
+    // 用户定制的马卡龙浅色系色板
+    const categoryColors = {
+        public_mandatory: "#FBE5D6",   // 浅肉色
+        public_general: "#FFF2CC",     // 浅黄色
+        major_mandatory: "#E2F0D9",    // 浅绿色
+        major_elective: "#E6D5F3",     // 浅紫色
+        practical_teaching: "#FFFFA7"  // 亮黄色
+    };
+
+    const categoryShortNames = {
+        public_mandatory: "公共必修",
+        public_general: "公共通识",
+        major_mandatory: "专业必修",
+        major_elective: "专业选修",
+        practical_teaching: "集中实践"
+    };
+
+    const statusMap = {
+        planned: "未修",
+        progress: "修读中",
+        passed: "已通过",
+        failed: "挂科",
+        retaken: "重修通过"
+    };
+
+    function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    // 主题切换逻辑
+    function switchTheme(isDark) {
+        if (isDark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('theme', 'light');
+        }
+    }
+
+    window.onload = () => {
+        // 初始化主题
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            if (currentTheme === 'dark') {
+                document.getElementById('theme-checkbox').checked = true;
+            }
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            // 跟随系统默认暗色
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.getElementById('theme-checkbox').checked = true;
+        }
+
+        // 初始化数据
+        const savedData = localStorage.getItem('se_intl_tracker_data');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (parsed.courses) {
+                    parsed.courses.forEach(c => { if (!c._id) c._id = generateId(); });
+                    appData = parsed;
+                    renderApp();
+                }
+            } catch (e) {
+                console.error("本地数据解析失败", e);
+            }
+        }
+    };
+
+    function clearCache() {
+        if(confirm("确定要清除所有本地数据吗？未导出的进度将会丢失！")) {
+            localStorage.removeItem('se_intl_tracker_data');
+            location.reload();
+        }
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const newData = JSON.parse(e.target.result);
+                if (newData.courses) {
+                    newData.courses = newData.courses.map(newCourse => {
+                        const existingCourse = appData.courses?.find(c => c.course_name === newCourse.course_name);
+                        return {
+                            ...newCourse,
+                            _id: existingCourse ? existingCourse._id : generateId(),
+                            status: existingCourse ? existingCourse.status : 'planned'
+                        };
+                    });
+                }
+                
+                newData.second_classroom = {
+                    ...newData.second_classroom,
+                    lecture_tickets_current: appData.second_classroom?.lecture_tickets_current || 0,
+                    activity_tickets_current: appData.second_classroom?.activity_tickets_current || 0
+                };
+
+                appData = newData;
+                saveData();
+                renderApp();
+            } catch (err) {
+                alert("导入失败: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    function exportData() {
+        const exportObj = JSON.parse(JSON.stringify(appData));
+        exportObj.courses.forEach(c => delete c._id);
+        
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "my_se_progress.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    function saveData() {
+        localStorage.setItem('se_intl_tracker_data', JSON.stringify(appData));
+    }
+
+    function updateTickets(type, delta) {
+        const key = type === 'lecture' ? 'lecture_tickets_current' : 'activity_tickets_current';
+        let newVal = (appData.second_classroom[key] || 0) + delta;
+        if (newVal < 0) newVal = 0; 
+        appData.second_classroom[key] = newVal;
+        saveData();
+        renderSecondClassroom();
+    }
+
+    function openHelpModal() { document.getElementById('helpModal').style.display = 'flex'; }
+    function closeHelpModal() { document.getElementById('helpModal').style.display = 'none'; }
+
+    function openSettingsModal() {
+        document.getElementById('settingsModal').style.display = 'flex';
+        document.getElementById('set_major').value = appData.student_profile?.major || '';
+        const reqs = appData.credit_requirements || {};
+        document.getElementById('set_pub_man').value = reqs.public_mandatory || 0;
+        document.getElementById('set_pub_gen').value = reqs.public_general || 0;
+        document.getElementById('set_maj_man').value = reqs.major_mandatory || 0;
+        document.getElementById('set_maj_ele').value = reqs.major_elective || 0;
+        document.getElementById('set_prac').value = reqs.practical_teaching || 0;
+        const sc = appData.second_classroom || {};
+        document.getElementById('set_lec_req').value = sc.lecture_tickets_required !== undefined ? sc.lecture_tickets_required : 8;
+        document.getElementById('set_act_req').value = sc.activity_tickets_required !== undefined ? sc.activity_tickets_required : 6;
+    }
+
+    function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
+
+    function saveSettings() {
+        if (!appData.student_profile) appData.student_profile = {};
+        if (!appData.credit_requirements) appData.credit_requirements = {};
+        if (!appData.second_classroom) appData.second_classroom = {};
+
+        appData.student_profile.major = document.getElementById('set_major').value.trim() || '未设置专业';
+        appData.credit_requirements.public_mandatory = parseFloat(document.getElementById('set_pub_man').value) || 0;
+        appData.credit_requirements.public_general = parseFloat(document.getElementById('set_pub_gen').value) || 0;
+        appData.credit_requirements.major_mandatory = parseFloat(document.getElementById('set_maj_man').value) || 0;
+        appData.credit_requirements.major_elective = parseFloat(document.getElementById('set_maj_ele').value) || 0;
+        appData.credit_requirements.practical_teaching = parseFloat(document.getElementById('set_prac').value) || 0;
+
+        appData.second_classroom.lecture_tickets_required = parseInt(document.getElementById('set_lec_req').value) || 0;
+        appData.second_classroom.activity_tickets_required = parseInt(document.getElementById('set_act_req').value) || 0;
+
+        saveData();
+        renderApp();
+        closeSettingsModal();
+    }
+
+    function openModal(courseId = null) {
+        document.getElementById('courseModal').style.display = 'flex';
+        if (courseId) {
+            document.getElementById('modalTitle').innerText = "编辑课程";
+            document.getElementById('btn_delete').style.display = 'block';
+            const course = appData.courses.find(c => c._id === courseId);
+            if (course) {
+                document.getElementById('form_id').value = course._id;
+                document.getElementById('form_name').value = course.course_name;
+                document.getElementById('form_credits').value = course.credits;
+                document.getElementById('form_category').value = course.category;
+                document.getElementById('form_semester').value = course.suggested_semester || 0;
+                document.getElementById('form_status').value = course.status || 'planned';
+            }
+        } else {
+            document.getElementById('modalTitle').innerText = "添加课程";
+            document.getElementById('btn_delete').style.display = 'none';
+            document.getElementById('form_id').value = '';
+            document.getElementById('form_name').value = '';
+            document.getElementById('form_credits').value = '';
+            document.getElementById('form_category').value = 'major_elective';
+            document.getElementById('form_semester').value = 0;
+            document.getElementById('form_status').value = 'planned';
+        }
+    }
+
+    function closeModal() { document.getElementById('courseModal').style.display = 'none'; }
+
+    function saveCourse() {
+        const id = document.getElementById('form_id').value;
+        const name = document.getElementById('form_name').value.trim();
+        const credits = parseFloat(document.getElementById('form_credits').value);
+        const category = document.getElementById('form_category').value;
+        const semester = parseInt(document.getElementById('form_semester').value) || 0;
+        const status = document.getElementById('form_status').value;
+
+        if (!name || isNaN(credits)) { alert("请填写完整的课程名称和有效学分！"); return; }
+
+        const courseObj = { _id: id || generateId(), course_name: name, credits: credits, category: category, suggested_semester: semester, status: status };
+
+        if (id) {
+            const index = appData.courses.findIndex(c => c._id === id);
+            if (index !== -1) appData.courses[index] = courseObj;
+        } else {
+            appData.courses.push(courseObj);
+        }
+        saveData();
+        renderApp();
+        closeModal();
+    }
+
+    function deleteCourse() {
+        const id = document.getElementById('form_id').value;
+        if(confirm("确定要删除这门课程吗？此操作不可恢复。")) {
+            appData.courses = appData.courses.filter(c => c._id !== id);
+            saveData();
+            renderApp();
+            closeModal();
+        }
+    }
+
+    function renderApp() {
+        if (!appData.student_profile) return;
+        document.getElementById('major-info').innerText = appData.student_profile.major || '未设置专业';
+        renderDashboard();
+        renderSecondClassroom();
+        renderCourses();
+    }
+
+    function renderDashboard() {
+        const container = document.getElementById('progress-container');
+        if(!appData.credit_requirements || Object.keys(appData.credit_requirements).length === 0) {
+            container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9em;">进度数据待初始化。请导入 JSON，或点击“设置”手动配置。</p>';
+            return;
+        }
+        container.innerHTML = '';
+        
+        let totalRequired = 0;
+        let totalEarned = 0;
+        let failedMandatory = 0;
+        const earnedCredits = {};
+        
+        for (const cat in appData.credit_requirements) { 
+            earnedCredits[cat] = 0; 
+            totalRequired += (appData.credit_requirements[cat] || 0);
+        }
+
+        appData.courses.forEach(course => {
+            if (course.status === 'passed' || course.status === 'retaken') {
+                if (earnedCredits[course.category] !== undefined) {
+                    earnedCredits[course.category] += course.credits;
+                }
+                totalEarned += course.credits;
+            } else if (course.status === 'failed' && mandatoryCategories.includes(course.category)) {
+                failedMandatory += course.credits;
+            }
+        });
+
+        const totalPassedPct = totalRequired > 0 ? Math.min((totalEarned / totalRequired) * 100, 100) : 0;
+        const totalFailedPct = totalRequired > 0 ? Math.min((failedMandatory / totalRequired) * 100, 100 - totalPassedPct) : 0;
+        
+        const failedTextHtml = failedMandatory > 0 
+            ? `<span style="font-size: 0.8em; color: var(--danger); margin-left: 8px;">(含必修挂科待重修: ${failedMandatory} 学分)</span>` 
+            : '';
+
+        container.innerHTML += `
+            <div class="progress-group" style="margin-bottom: 5px;">
+                <div class="progress-header" style="font-size: 1.1em; color: var(--primary);">
+                    <span>毕业要求总学分</span>
+                    <div>
+                        <span>${totalEarned} / ${totalRequired} 学分</span>
+                        ${failedTextHtml}
+                    </div>
+                </div>
+                <div class="progress-bar" style="height: 14px;">
+                    <div class="progress-fill ${totalEarned >= totalRequired && totalRequired > 0 ? 'complete' : ''}" style="width: ${totalPassedPct}%;"></div>
+                    <div class="progress-fill failed-mandatory" style="width: ${totalFailedPct}%;" title="必修挂科待重修: ${failedMandatory}学分"></div>
+                </div>
+            </div>
+            <hr class="total-separator">
+        `;
+
+        for (const [catKey, reqCredits] of Object.entries(appData.credit_requirements)) {
+            const current = earnedCredits[catKey] || 0;
+            const percentage = reqCredits > 0 ? Math.min((current / reqCredits) * 100, 100).toFixed(1) : (current > 0 ? 100 : 0);
+            const name = categoryNames[catKey] || catKey;
+            
+            // 为浅色系进度条添加边框描边
+            const barColor = categoryColors[catKey] || '#cbd5e0';
+
+            container.innerHTML += `
+                <div class="progress-group">
+                    <div class="progress-header">
+                        <span style="color: var(--text-main);">${name}</span>
+                        <span style="color: var(--text-muted);">${current} / ${reqCredits} 学分</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percentage}%; background-color: ${barColor}; border: 1px solid var(--segment-border);"></div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function renderSecondClassroom() {
+        const container = document.getElementById('tickets-container');
+        if (!appData.second_classroom || appData.second_classroom.lecture_tickets_required === undefined) {
+            container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9em;">进度数据待初始化。请导入 JSON，或点击“设置”手动配置。</p>';
+            return;
+        }
+        const currentLec = appData.second_classroom.lecture_tickets_current || 0;
+        const reqLec = appData.second_classroom.lecture_tickets_required;
+        const currentAct = appData.second_classroom.activity_tickets_current || 0;
+        const reqAct = appData.second_classroom.activity_tickets_required;
+
+        container.innerHTML = `
+            <div class="ticket-counter">
+                <div>
+                    <strong>讲座票 (Lecture Tickets)</strong><br>
+                    <span style="font-size:0.9em; color:${currentLec >= reqLec && reqLec > 0 ? 'var(--success)' : 'var(--text-muted)'}">进度: ${currentLec} / ${reqLec}</span>
+                </div>
+                <div class="counter-controls">
+                    <button class="btn-icon" onclick="updateTickets('lecture', -1)">-</button>
+                    <span style="width: 20px; text-align: center; font-weight: bold; color: var(--text-main);">${currentLec}</span>
+                    <button class="btn-icon" onclick="updateTickets('lecture', 1)">+</button>
+                </div>
+            </div>
+            <div class="ticket-counter">
+                <div>
+                    <strong>活动票 (Activity Tickets)</strong><br>
+                    <span style="font-size:0.9em; color:${currentAct >= reqAct && reqAct > 0 ? 'var(--success)' : 'var(--text-muted)'}">进度: ${currentAct} / ${reqAct}</span>
+                </div>
+                <div class="counter-controls">
+                    <button class="btn-icon" onclick="updateTickets('activity', -1)">-</button>
+                    <span style="width: 20px; text-align: center; font-weight: bold; color: var(--text-main);">${currentAct}</span>
+                    <button class="btn-icon" onclick="updateTickets('activity', 1)">+</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCourses() {
+        const container = document.getElementById('course-list');
+        if (!appData.courses || appData.courses.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">数据导入或添加课程后，将按学期展示课程表。</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        const semesters = {};
+        appData.courses.forEach(c => {
+            const sem = c.suggested_semester || 0;
+            if (!semesters[sem]) semesters[sem] = [];
+            semesters[sem].push(c);
+        });
+
+        const sortedSemesters = Object.keys(semesters).sort((a,b) => a-b);
+
+        sortedSemesters.forEach(sem => {
+            let tableRows = '';
+            
+            let totalSemCredits = 0;
+            let earnedSemCredits = 0;
+            let catCredits = {};
+
+            semesters[sem].forEach(course => {
+                totalSemCredits += course.credits;
+                if (course.status === 'passed' || course.status === 'retaken') {
+                    earnedSemCredits += course.credits;
+                }
+                if (!catCredits[course.category]) catCredits[course.category] = 0;
+                catCredits[course.category] += course.credits;
+
+                const statusClass = `status-${course.status || 'planned'}`;
+                const statusText = statusMap[course.status || 'planned'];
+                
+                tableRows += `
+                    <tr>
+                        <td width="40%"><strong style="color: var(--text-main);">${course.course_name}</strong><br><span style="font-size:0.8em; color:var(--text-muted)">${categoryNames[course.category] || course.category}</span></td>
+                        <td width="20%" style="color: var(--text-main);">${course.credits} 学分</td>
+                        <td width="20%"><span class="${statusClass}">${statusText}</span></td>
+                        <td width="20%">
+                            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.85em;" onclick="openModal('${course._id}')">编辑</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            let stackedBarHTML = '';
+            let legendHTML = '';
+            
+            for (const cat in catCredits) {
+                const pct = totalSemCredits > 0 ? (catCredits[cat] / totalSemCredits) * 100 : 0;
+                const color = categoryColors[cat] || "#cbd5e0";
+                const shortName = categoryShortNames[cat] || categoryNames[cat] || cat;
+                
+                // 给甘特图中的每一个色块加上明显的分割描边
+                stackedBarHTML += `<div style="width: ${pct}%; height: 100%; background-color: ${color}; border-right: 2px solid var(--card-bg); box-sizing: border-box;" title="${categoryNames[cat]}: ${catCredits[cat]}学分"></div>`;
+                legendHTML += `<span style="display:flex; align-items:center; gap:6px; margin-right: 15px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background-color: ${color}; border: 1px solid var(--segment-border);"></span>${shortName} ${catCredits[cat]}</span>`;
+            }
+
+            const semTitle = sem == 0 ? "未分配学期 / 自定义添加课程" : `第 ${sem} 学期 (Semester ${sem})`;
+            
+            const blockHTML = `
+                <div class="semester-block">
+                    <div style="display: flex; flex-direction: column; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; margin-bottom: 10px;">
+                            <h4 style="margin: 0; color: var(--primary);">${semTitle}</h4>
+                            <span style="font-size: 0.95em; color: var(--text-main); font-weight: bold;">本学期已修 <span style="color: var(--primary);">${earnedSemCredits}</span> / ${totalSemCredits} 学分</span>
+                        </div>
+                        <div style="display: flex; width: 100%; height: 12px; border-radius: 6px; overflow: hidden; background-color: var(--track-bg); margin-bottom: 10px; border: 1px solid var(--border-color);">
+                            ${stackedBarHTML}
+                        </div>
+                        <div style="display: flex; font-size: 0.85em; color: var(--text-muted); flex-wrap: wrap;">
+                            ${legendHTML}
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr><th>课程名称 / 类别</th><th>学分</th><th>当前状态</th><th>操作</th></tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
+            container.innerHTML += blockHTML;
+        });
+    }
+</script>
+
+</body>
+</html>

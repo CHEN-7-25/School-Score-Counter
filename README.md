@@ -33,3 +33,5 @@
 1. **下载或克隆本仓库**：
    ```bash
    git clone [https://github.com/你的用户名/你的仓库名.git](https://github.com/你的用户名/你的仓库名.git)
+
+2. **双击打开 credit_tracker.html 文件，即可在任意现代浏览器中使用。**

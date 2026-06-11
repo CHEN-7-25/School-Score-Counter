@@ -17,7 +17,7 @@
             --text-muted: #718096;
             --border-color: #e2e8f0;
             --track-bg: #edf2f7;
-            --segment-border: rgba(0, 0, 0, 0.15); /* 进度条色块描边 */
+            --segment-border: rgba(0, 0, 0, 0.15); 
             --table-head-bg: #edf2f7;
             --modal-overlay: rgba(0, 0, 0, 0.5);
         }
@@ -34,7 +34,7 @@
             --text-muted: #a0aec0;   
             --border-color: #4a5568; 
             --track-bg: #171923;     
-            --segment-border: rgba(255, 255, 255, 0.15); /* 暗黑模式下的色块描边 */
+            --segment-border: rgba(255, 255, 255, 0.15); 
             --table-head-bg: rgba(0, 0, 0, 0.2);
             --modal-overlay: rgba(0, 0, 0, 0.7);
         }
@@ -42,12 +42,10 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.6; transition: background-color 0.3s, color 0.3s; }
         .container { max-width: 1000px; margin: 0 auto; }
         
-        /* 顶栏布局 */
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         .header-left { display: flex; flex-direction: column; gap: 5px; }
         .header-right { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-        /* 主题切换开关 (胶囊风格) */
         .theme-switch-wrapper { display: flex; align-items: center; margin-right: 10px; }
         .theme-switch { display: inline-block; height: 30px; position: relative; width: 60px; }
         .theme-switch input { display: none; }
@@ -57,7 +55,6 @@
         input:checked + .slider:before { transform: translateX(30px); }
         .slider .icon { font-size: 14px; z-index: 1; user-select: none; }
         
-        /* 线框发光按钮设计 */
         .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-weight: bold; transition: all 0.2s; font-size: 0.9em; background: transparent; }
         .btn-outline { border-color: var(--text-muted); color: var(--text-main); }
         .btn-outline:hover { background-color: rgba(160, 174, 192, 0.15); }
@@ -79,7 +76,6 @@
         .progress-group { margin-bottom: 15px; }
         .progress-header { display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
         
-        /* 进度条轨道样式 */
         .progress-bar { width: 100%; height: 12px; background-color: var(--track-bg); border-radius: 6px; overflow: hidden; display: flex; border: 1px solid var(--border-color); box-sizing: border-box; }
         .progress-fill { height: 100%; background-color: var(--primary); transition: width 0.3s ease; box-sizing: border-box; }
         .progress-fill.complete { background-color: var(--success); }
@@ -104,7 +100,6 @@
         .status-passed, .status-retaken { color: var(--success); font-weight: bold; }
         .status-failed { color: var(--danger); font-weight: bold; }
 
-        /* 弹窗与表单样式 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-overlay); justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; backdrop-filter: blur(3px); }
         .modal { background: var(--card-bg); padding: 25px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); border: 1px solid var(--border-color); max-height: 90vh; overflow-y: auto; color: var(--text-main); }
         .modal.modal-large { max-width: 650px; }
@@ -196,16 +191,16 @@
 
 提取规则：
 1. student_profile: major 填图片上的专业名称。
-2. credit_requirements: 提取培养方案中毕业要求所需的各分类总学分。
+2. credit_requirements: 提取培养方案中毕业要求所需的各分类总学分（注意集中实践教学细分为必修和选修）。
 3. second_classroom: 提取第二课堂的讲座票和活动票要求数量（如无要求可填 0）。
-4. courses: 提取所有课程。字段：course_name(名称), credits(学分，浮点数), category(从 public_mandatory, public_general, major_mandatory, major_elective, practical_teaching 选一), suggested_semester(建议开课学期，数字1-8，不确定填0)。
+4. courses: 提取所有课程。字段：course_name(名称), credits(学分，浮点数), category(从 public_mandatory, public_general, major_mandatory, major_elective, practical_mandatory, practical_elective 选一), suggested_semester(建议开课学期，数字1-8，不确定填0)。
 
 输出格式模板：
 {
   "student_profile": { "major": "软件工程" },
-  "credit_requirements": { "public_mandatory": 36.0, "public_general": 39.0, "major_mandatory": 44.0, "major_elective": 15.0, "practical_teaching": 36.0 },
+  "credit_requirements": { "public_mandatory": 36.0, "public_general": 39.0, "major_mandatory": 44.0, "major_elective": 15.0, "practical_mandatory": 32.0, "practical_elective": 6.0 },
   "second_classroom": { "lecture_tickets_required": 8, "activity_tickets_required": 6 },
-  "courses": [ { "course_name": "高等数学", "credits": 4.0, "category": "public_mandatory", "suggested_semester": 1 } ]
+  "courses": [ { "course_name": "软件开发综合实训", "credits": 5.0, "category": "practical_mandatory", "suggested_semester": 4 } ]
 }</pre>
         </div>
         <div class="modal-actions">
@@ -233,7 +228,8 @@
                 <option value="public_general">公共基础课（通识）</option>
                 <option value="major_mandatory">专业基础课（必修）</option>
                 <option value="major_elective">专业基础课（选修）</option>
-                <option value="practical_teaching">集中实践教学</option>
+                <option value="practical_mandatory">集中实践教学（必修）</option>
+                <option value="practical_elective">集中实践教学（选修）</option>
             </select>
         </div>
         <div class="form-group">
@@ -289,8 +285,12 @@
             <input type="number" id="set_maj_ele" step="0.5" min="0" value="0">
         </div>
         <div class="form-group">
-            <label>集中实践教学</label>
-            <input type="number" id="set_prac" step="0.5" min="0" value="0">
+            <label>集中实践教学（必修）</label>
+            <input type="number" id="set_prac_man" step="0.5" min="0" value="0">
+        </div>
+        <div class="form-group">
+            <label>集中实践教学（选修）</label>
+            <input type="number" id="set_prac_ele" step="0.5" min="0" value="0">
         </div>
         
         <h4 style="margin-bottom: 10px; color: var(--primary);">第二课堂目标</h4>
@@ -318,23 +318,27 @@
         courses: []
     };
 
+    // 分类更名与细分
     const categoryNames = {
         public_mandatory: "公共基础课（必修）",
         public_general: "公共基础课（通识）",
         major_mandatory: "专业基础课（必修）",
         major_elective: "专业基础课（选修）",
-        practical_teaching: "集中实践教学"
+        practical_mandatory: "集中实践教学（必修）",
+        practical_elective: "集中实践教学（选修）"
     };
 
-    const mandatoryCategories = ['public_mandatory', 'major_mandatory', 'practical_teaching'];
+    // 必修判断依据，挂科会纳入欠债红条
+    const mandatoryCategories = ['public_mandatory', 'major_mandatory', 'practical_mandatory'];
 
-    // 用户定制的马卡龙浅色系色板
+    // 扩充色板，新增粉色用于实践选修
     const categoryColors = {
         public_mandatory: "#FBE5D6",   // 浅肉色
         public_general: "#FFF2CC",     // 浅黄色
         major_mandatory: "#E2F0D9",    // 浅绿色
         major_elective: "#E6D5F3",     // 浅紫色
-        practical_teaching: "#FFFFA7"  // 亮黄色
+        practical_mandatory: "#FFFFA7",// 亮黄色
+        practical_elective: "#FFE5E5"  // 浅粉色
     };
 
     const categoryShortNames = {
@@ -342,7 +346,8 @@
         public_general: "公共通识",
         major_mandatory: "专业必修",
         major_elective: "专业选修",
-        practical_teaching: "集中实践"
+        practical_mandatory: "实践必修",
+        practical_elective: "实践选修"
     };
 
     const statusMap = {
@@ -357,7 +362,6 @@
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 
-    // 主题切换逻辑
     function switchTheme(isDark) {
         if (isDark) {
             document.documentElement.setAttribute('data-theme', 'dark');
@@ -368,8 +372,28 @@
         }
     }
 
+    // 自动平滑升级旧数据的兼容函数
+    function upgradeLegacyData(data) {
+        if (!data) return data;
+        
+        // 升级学分要求配置
+        if (data.credit_requirements && data.credit_requirements.practical_teaching !== undefined) {
+            data.credit_requirements.practical_mandatory = data.credit_requirements.practical_teaching;
+            delete data.credit_requirements.practical_teaching;
+        }
+        
+        // 升级已有课程的分类
+        if (data.courses && Array.isArray(data.courses)) {
+            data.courses.forEach(c => {
+                if (c.category === 'practical_teaching') {
+                    c.category = 'practical_mandatory'; // 默认将旧的实践课归为必修
+                }
+            });
+        }
+        return data;
+    }
+
     window.onload = () => {
-        // 初始化主题
         const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
         if (currentTheme) {
             document.documentElement.setAttribute('data-theme', currentTheme);
@@ -377,16 +401,16 @@
                 document.getElementById('theme-checkbox').checked = true;
             }
         } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            // 跟随系统默认暗色
             document.documentElement.setAttribute('data-theme', 'dark');
             document.getElementById('theme-checkbox').checked = true;
         }
 
-        // 初始化数据
         const savedData = localStorage.getItem('se_intl_tracker_data');
         if (savedData) {
             try {
-                const parsed = JSON.parse(savedData);
+                let parsed = JSON.parse(savedData);
+                parsed = upgradeLegacyData(parsed); // 加载时执行一次自动升级
+                
                 if (parsed.courses) {
                     parsed.courses.forEach(c => { if (!c._id) c._id = generateId(); });
                     appData = parsed;
@@ -411,7 +435,9 @@
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const newData = JSON.parse(e.target.result);
+                let newData = JSON.parse(e.target.result);
+                newData = upgradeLegacyData(newData); // 导入时执行自动升级兼容
+                
                 if (newData.courses) {
                     newData.courses = newData.courses.map(newCourse => {
                         const existingCourse = appData.courses?.find(c => c.course_name === newCourse.course_name);
@@ -477,7 +503,9 @@
         document.getElementById('set_pub_gen').value = reqs.public_general || 0;
         document.getElementById('set_maj_man').value = reqs.major_mandatory || 0;
         document.getElementById('set_maj_ele').value = reqs.major_elective || 0;
-        document.getElementById('set_prac').value = reqs.practical_teaching || 0;
+        document.getElementById('set_prac_man').value = reqs.practical_mandatory || 0;
+        document.getElementById('set_prac_ele').value = reqs.practical_elective || 0;
+        
         const sc = appData.second_classroom || {};
         document.getElementById('set_lec_req').value = sc.lecture_tickets_required !== undefined ? sc.lecture_tickets_required : 8;
         document.getElementById('set_act_req').value = sc.activity_tickets_required !== undefined ? sc.activity_tickets_required : 6;
@@ -495,7 +523,8 @@
         appData.credit_requirements.public_general = parseFloat(document.getElementById('set_pub_gen').value) || 0;
         appData.credit_requirements.major_mandatory = parseFloat(document.getElementById('set_maj_man').value) || 0;
         appData.credit_requirements.major_elective = parseFloat(document.getElementById('set_maj_ele').value) || 0;
-        appData.credit_requirements.practical_teaching = parseFloat(document.getElementById('set_prac').value) || 0;
+        appData.credit_requirements.practical_mandatory = parseFloat(document.getElementById('set_prac_man').value) || 0;
+        appData.credit_requirements.practical_elective = parseFloat(document.getElementById('set_prac_ele').value) || 0;
 
         appData.second_classroom.lecture_tickets_required = parseInt(document.getElementById('set_lec_req').value) || 0;
         appData.second_classroom.activity_tickets_required = parseInt(document.getElementById('set_act_req').value) || 0;
@@ -631,8 +660,6 @@
             const current = earnedCredits[catKey] || 0;
             const percentage = reqCredits > 0 ? Math.min((current / reqCredits) * 100, 100).toFixed(1) : (current > 0 ? 100 : 0);
             const name = categoryNames[catKey] || catKey;
-            
-            // 为浅色系进度条添加边框描边
             const barColor = categoryColors[catKey] || '#cbd5e0';
 
             container.innerHTML += `
@@ -741,7 +768,6 @@
                 const color = categoryColors[cat] || "#cbd5e0";
                 const shortName = categoryShortNames[cat] || categoryNames[cat] || cat;
                 
-                // 给甘特图中的每一个色块加上明显的分割描边
                 stackedBarHTML += `<div style="width: ${pct}%; height: 100%; background-color: ${color}; border-right: 2px solid var(--card-bg); box-sizing: border-box;" title="${categoryNames[cat]}: ${catCredits[cat]}学分"></div>`;
                 legendHTML += `<span style="display:flex; align-items:center; gap:6px; margin-right: 15px;"><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background-color: ${color}; border: 1px solid var(--segment-border);"></span>${shortName} ${catCredits[cat]}</span>`;
             }

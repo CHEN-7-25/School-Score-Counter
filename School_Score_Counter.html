@@ -612,7 +612,9 @@
         container.innerHTML = '';
         
         let totalRequired = 0;
-        let totalEarned = 0;
+        let totalPassed = 0;
+        let totalFailed = 0;
+        let totalProgress = 0;
         let failedMandatory = 0;
         const earnedCredits = {};
         
@@ -626,17 +628,23 @@
                 if (earnedCredits[course.category] !== undefined) {
                     earnedCredits[course.category] += course.credits;
                 }
-                totalEarned += course.credits;
-            } else if (course.status === 'failed' && mandatoryCategories.includes(course.category)) {
-                failedMandatory += course.credits;
+                totalPassed += course.credits;
+            } else if (course.status === 'failed') {
+                totalFailed += course.credits;
+                if (mandatoryCategories.includes(course.category)) {
+                    failedMandatory += course.credits;
+                }
+            } else if (course.status === 'progress') {
+                totalProgress += course.credits;
             }
         });
 
-        const totalPassedPct = totalRequired > 0 ? Math.min((totalEarned / totalRequired) * 100, 100) : 0;
+        const totalEarned = totalPassed + totalFailed + totalProgress;
+        const totalPassedPct = totalRequired > 0 ? Math.min((totalPassed / totalRequired) * 100, 100) : 0;
         const totalFailedPct = totalRequired > 0 ? Math.min((failedMandatory / totalRequired) * 100, 100 - totalPassedPct) : 0;
         
-        const failedTextHtml = failedMandatory > 0 
-            ? `<span style="font-size: 0.8em; color: var(--danger); margin-left: 8px;">(含必修挂科待重修: ${failedMandatory} 学分)</span>` 
+        const failedTextHtml = totalFailed > 0 
+            ? `<span style="font-size: 0.8em; margin-left: 8px;">(未通过: <span style="color: var(--danger); font-weight: bold;">${totalFailed}</span>)</span>` 
             : '';
 
         container.innerHTML += `
@@ -649,7 +657,7 @@
                     </div>
                 </div>
                 <div class="progress-bar" style="height: 14px;">
-                    <div class="progress-fill ${totalEarned >= totalRequired && totalRequired > 0 ? 'complete' : ''}" style="width: ${totalPassedPct}%;"></div>
+                    <div class="progress-fill ${totalPassed >= totalRequired && totalRequired > 0 ? 'complete' : ''}" style="width: ${totalPassedPct}%;"></div>
                     <div class="progress-fill failed-mandatory" style="width: ${totalFailedPct}%;" title="必修挂科待重修: ${failedMandatory}学分"></div>
                 </div>
             </div>
